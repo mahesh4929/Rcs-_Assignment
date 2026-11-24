@@ -6,7 +6,8 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import com.bajaj.rcs.entity.Claim;
+import com.bajaj.rcs.entity.ClaimHandler;
 
 public final class RcsDto {
 
@@ -49,5 +50,12 @@ public final class RcsDto {
             @NotNull LocalDateTime leaveFrom,
             @NotNull LocalDateTime leaveTo,
             boolean halfDay
+    ) { }
+
+    // What the service returns after allocating: the claim, and every handler that was eligible.
+    public record AllocationResult(
+            Claim claim,
+            List<ClaimHandler> eligibleHandlers,
+            boolean alreadyAllocated
     ) { }
 }

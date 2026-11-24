@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.bajaj.rcs.dto.RcsDto.AllocationResult;
+
 
 @RestController
 @RequestMapping("/api/claims")
@@ -25,15 +27,35 @@ public class ClaimController {
     }
 
 
+    /**
+     * Client / external claim system sends claim details here.
+     * The claim is saved, all eligible handlers are listed, and one is picked by round robin.
+     */
     @PostMapping("/allocate")
-    public Map<String, Object> allocate(
-            @Valid @RequestBody ClaimRequest request) {
-        Claim claim = allocationService.allocate(request);
+    public Map<String, Object> allocate(@Valid @RequestBody ClaimRequest request) {
+        AllocationResult result = allocationService.allocate(request);
 
-        Map<String, Object> response = toMap(claim);
+        Map<String, Object> response = toMap(result.claim());
 
-        response.put(
-                "message", "Claim allocated successfully");
+        // List of every eligible handler for this claim
+        List<Map<String, Object>> eligible = result.eligibleHandlers().stream()
+                .map(h -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("handlerCode", h.getHandlerCode());
+                    m.put("handlerName", h.getHandlerName());
+                    return m;
+                })
+                .toList();
+        response.put("eligibleHandlerCount", eligible.size());
+        response.put("eligibleHandlers", eligible);
+
+        if (result.alreadyAllocated()) {
+            response.put("message", "Claim was already allocated - same handler returned");
+        } else if (eligible.size() == 1) {
+            response.put("message", "Only one eligible handler - claim allocated to it");
+        } else {
+            response.put("message", eligible.size() + " eligible handlers - selected by round robin");
+        }
         return response;
     }
 
